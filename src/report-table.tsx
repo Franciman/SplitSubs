@@ -20,7 +20,7 @@ export class ReportTable extends React.Component<ReportTableProps, {}> {
             }
             let entry = (
                 <tr>
-                    <td>{this.props.users[i].name}</td>
+                    <td>{`@${this.props.users[i].name}`}</td>
                     <td>{part}</td>
                 </tr>
             );
