@@ -5,20 +5,8 @@ import { UserList } from './user-list'
 import * as Subtitle from 'subtitle'
 import { ReportTable } from './report-table'
 import { saveAs } from 'file-saver'
-import * as JSZip from 'jszip'
-import { extractSeriesNameAndEpisode } from './extract-series-name'
-
-function splitSubsInZipArchive(subs: Array<any>, users: Array<User>): Promise<Blob> {
-    let startPart = 0;
-    let zip: JSZip = new JSZip();
-    for(let i = 0; i < users.length; i++) {
-        let part = subs.slice(startPart, startPart + users[i].partSize);
-        let partText = Subtitle.stringify(part);
-        zip.file(`sub.${users[i].name}.${startPart + 1}-${startPart + users[i].partSize}.srt`, partText);
-        startPart += users[i].partSize;
-    }
-    return zip.generateAsync({type: "blob"});
-}
+import { splitSubsInZipArchive } from './zip-generator'
+import { SeriesInfo, extractSeriesInfo } from './extract-series-info'
 
 enum LoadState {
     NotLoaded,
@@ -30,7 +18,23 @@ export interface SplitFormState {
     loadState: LoadState,
     users: Array<User>,
     subs: Array<any>,
+    seriesInfo: SeriesInfo,
     showReport: boolean,
+}
+
+function makeFilename(infos: SeriesInfo): string {
+    let name = infos.seriesName;
+
+    // This should not happen, but to be sure double check it
+    if(name == '') {
+        name = 'subtitles';
+    }
+
+    let episode = '';
+    if(infos.season && infos.episode) {
+        episode=`.s${infos.season}e${infos.episode}`;
+    }
+    return `${name}${episode}`;
 }
 
 export class SplitForm extends React.Component<{}, SplitFormState> {
@@ -43,6 +47,7 @@ export class SplitForm extends React.Component<{}, SplitFormState> {
             loadState: LoadState.NotLoaded,
             users: [],
             subs: [],
+            seriesInfo: { seriesName: "" },
             showReport: false,
         };
     }
@@ -52,7 +57,9 @@ export class SplitForm extends React.Component<{}, SplitFormState> {
         this.usersManager = new UsersManager(this.state.users, subsCount, (newUsers: Array<User>) => {
             this.setState({ users: newUsers });
         });
-        this.usersManager.addUser();
+        if(this.usersManager.users.length == 0) {
+            this.usersManager.addUser();
+        }
     }
 
     uninitUsersManager() {
@@ -62,8 +69,9 @@ export class SplitForm extends React.Component<{}, SplitFormState> {
     selectFile(e: React.FormEvent<HTMLInputElement>) {
         if(e.currentTarget.files.length != 0) {
             // Do parsing
-            console.log(extractSeriesNameAndEpisode(e.currentTarget.files[0].name));
-            this.setState({loadState: LoadState.Loading});
+            let selectedFile = e.currentTarget.files[0];
+            console.log(extractSeriesInfo(selectedFile.name));
+            this.setState({loadState: LoadState.Loading, showReport: false});
             let reader = new FileReader();
             reader.onload = (e) => {
                 try {
@@ -73,28 +81,34 @@ export class SplitForm extends React.Component<{}, SplitFormState> {
                         this.uninitUsersManager();
                         alert("Empty srt file");
                     } else {
+                        let seriesInfo = extractSeriesInfo(selectedFile.name);
                         this.initUsersManager(p.length);
-                        this.setState({subs: p, loadState: LoadState.Loaded});
+                        this.setState({subs: p, seriesInfo: seriesInfo, loadState: LoadState.Loaded});
                     }
                 }
                 catch(e) {
-                    this.setState({subs: [], loadState: LoadState.NotLoaded});
+                    this.setState({subs: [], seriesInfo: {seriesName: ""}, loadState: LoadState.NotLoaded});
                     this.uninitUsersManager();
                     alert("Invalid srt file");
                 }
             };
-            reader.readAsText(e.currentTarget.files[0]);
+            reader.readAsText(selectedFile);
         }
         else {
-            this.setState({subs: [], loadState: LoadState.NotLoaded});
+            this.setState({subs: [], seriesInfo: {seriesName: ""}, loadState: LoadState.NotLoaded});
         }
     }
 
     onSubmit(e: React.FormEvent<HTMLFormElement>) {
         e.preventDefault();
 
-        splitSubsInZipArchive(this.state.subs, this.state.users).then((blob) => {
-            saveAs(blob, 'subtitles.zip');
+        let filename = makeFilename(this.state.seriesInfo);
+        let nameGen = function(user: User, start: number, end: number): string {
+            return `${filename}.${start}-${end}.${user.name}.srt`;
+        };
+
+        splitSubsInZipArchive(nameGen, this.state.subs, this.state.users).then((blob) => {
+            saveAs(blob, `${filename}.zip`);
         });
         this.setState({showReport: true});
     }
@@ -133,7 +147,7 @@ export class SplitForm extends React.Component<{}, SplitFormState> {
             <form onSubmit={(e) => this.onSubmit(e)} >
                 <div className="topmostDiv">
                     <label htmlFor="srtFile">Select subtitles file: </label>
-                    <br />
+                    <br/>
                     <input type="file"
                            name="srtFile" accept=".srt"
                            id="srtFile"
