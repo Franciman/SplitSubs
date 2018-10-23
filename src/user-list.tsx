@@ -9,6 +9,7 @@ export interface UserListProps {
 
 export class UserList extends React.Component<UserListProps, {}> {
     keepAtBottom: boolean
+    private lastTranslatorRowRef = React.createRef<TranslatorRow>();
 
     constructor(props: UserListProps) {
         super(props)
@@ -25,11 +26,22 @@ export class UserList extends React.Component<UserListProps, {}> {
         }
     }
 
+    componentDidMount() {
+        this.focusLastTranslator();
+    }
+
     componentDidUpdate() {
         if(this.keepAtBottom) {
             let root = document.getElementById('root');
             root.scrollTop = root.scrollHeight - root.clientHeight;
             this.keepAtBottom = false;
+        }
+        this.focusLastTranslator();
+    }
+
+    focusLastTranslator() {
+        if(this.lastTranslatorRowRef.current != null) {
+            this.lastTranslatorRowRef.current.focus();
         }
     }
 
@@ -37,9 +49,11 @@ export class UserList extends React.Component<UserListProps, {}> {
         let userElements = [];
         for(let i = 0; i < this.props.users.length; i++)
         {
+            // TODO: Probably it's suboptimal to repeatedly assign lastTranslatorRowRef
             userElements.push(<TranslatorRow usersManager={this.props.usersManager}
                                              user={this.props.users[i]}
                                              rowIndex={i}
+                                             ref={this.lastTranslatorRowRef}
                                              key={i} />);
         }
 

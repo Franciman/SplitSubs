@@ -9,6 +9,7 @@ export interface TranslatorRowProps {
 }
 
 export class TranslatorRow extends React.Component<TranslatorRowProps, {}> {
+    private textInputRef = React.createRef<HTMLInputElement>();
     constructor(props: TranslatorRowProps) {
         super(props)
     }
@@ -21,6 +22,10 @@ export class TranslatorRow extends React.Component<TranslatorRowProps, {}> {
         if(!this.props.usersManager.removeUser(this.props.rowIndex)) {
             alert("You can't remove all translators");
         }
+    }
+
+    focus() {
+        this.textInputRef.current.focus();
     }
 
     render() {
@@ -40,6 +45,7 @@ export class TranslatorRow extends React.Component<TranslatorRowProps, {}> {
                 <td>
                     <input type="text"
                            value={this.props.user.name}
+                           ref={this.textInputRef}
                            onChange={(e) => this.onChange(e)} required />
                 </td>
                 <td>
