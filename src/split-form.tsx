@@ -107,7 +107,9 @@ export class SplitForm extends React.Component<{}, SplitFormState> {
             return `${filename}.${start}-${end}.${user.name}.srt`;
         };
 
-        splitSubsInZipArchive(nameGen, this.state.subs, this.state.users).then((blob) => {
+        let voFilename = `${filename}.VO.srt`;
+
+        splitSubsInZipArchive(voFilename, nameGen, this.state.subs, this.state.users).then((blob) => {
             saveAs(blob, `${filename}.zip`);
         });
         this.setState({showReport: true});

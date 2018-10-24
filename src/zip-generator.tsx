@@ -4,7 +4,7 @@ import { User } from './users-manager'
 
 export type FileNameGenerator = (user: User, start: number, end: number) => string;
 
-export function splitSubsInZipArchive(filenameGen: FileNameGenerator, subs: Array<any>, users: Array<User>): Promise<Blob> {
+export function splitSubsInZipArchive(voFilename: string, filenameGen: FileNameGenerator, subs: Array<any>, users: Array<User>): Promise<Blob> {
     let startPart = 0;
     let zip: JSZip = new JSZip();
     for(let i = 0; i < users.length; i++) {
@@ -17,6 +17,10 @@ export function splitSubsInZipArchive(filenameGen: FileNameGenerator, subs: Arra
 
         startPart += users[i].partSize;
     }
+
+    // Add also vo
+    let allSubs = Subtitle.stringify(subs);
+    zip.file(voFilename, allSubs);
     return zip.generateAsync({type: "blob"});
 }
 
