@@ -8,12 +8,12 @@ export interface UserListProps {
 }
 
 export class UserList extends React.Component<UserListProps, {}> {
-    keepAtBottom: boolean
+    private userAdded: boolean
     private lastTranslatorRowRef = React.createRef<TranslatorRow>();
 
     constructor(props: UserListProps) {
         super(props)
-        this.keepAtBottom = false;
+        this.userAdded = false;
     }
 
     addUser() {
@@ -22,7 +22,7 @@ export class UserList extends React.Component<UserListProps, {}> {
             alert("No more translators needed");
         }
         else {
-            this.keepAtBottom = true;
+            this.userAdded = true;
         }
     }
 
@@ -31,12 +31,12 @@ export class UserList extends React.Component<UserListProps, {}> {
     }
 
     componentDidUpdate() {
-        if(this.keepAtBottom) {
+        if(this.userAdded) {
             let root = document.getElementById('root');
             root.scrollTop = root.scrollHeight - root.clientHeight;
-            this.keepAtBottom = false;
+            this.focusLastTranslator();
+            this.userAdded = false;
         }
-        this.focusLastTranslator();
     }
 
     focusLastTranslator() {
